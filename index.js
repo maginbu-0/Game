@@ -2,7 +2,7 @@ const canvas = document.querySelector('canvas'); /// selecting the canvas elemen
 const ctx = canvas.getContext('2d');
 
 canvas.width = 1024;    /// setting the width and height of the canvas
-canvas.height = 576;
+canvas.height = 576;    /// Use 450x zoom in tiled
 
 ctx.fillStyle = 'white'; /// setting the fill color to white and filling the entire canvas with it
 ctx.fillRect(0, 0, canvas.width, canvas.height);
