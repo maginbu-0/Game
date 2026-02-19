@@ -24,7 +24,6 @@ class Boundary {
     }
     draw(){
         ctx.fillStyle = 'red';
-        // *** KEY FIX: Draw boundaries relative to camera position (bg) ***
         ctx.fillRect(
             this.position.x + bg.position.x, 
             this.position.y + bg.position.y, 
@@ -69,6 +68,11 @@ class Sprite {
         this.position = position
         this.image = image
         this.frames = frames
+        this.image.onload = () => {
+            this.width = this.image.width / this.frames.max; /// setting the width and height of the player sprite to be 1/7th of its original size, this is because we have 7 sprites
+            this.height = this.image.height;
+            console.log(this.width, this.height) /// setting the height of the player sprite
+        }
     }
     draw(){
         ctx.drawImage(
@@ -97,8 +101,8 @@ const bg = new Sprite({
 
 const player = new Sprite({
     position: {
-        x: canvas.width/2 - plyerImage.width/(2 * 7),
-        y: canvas.height/2 - plyerImage.height/2
+        x: canvas.width/2 - 1008/(2 * 7),
+        y: canvas.height/2 - 144/2
     },
     image: plyerImage,
     frames: { max: 7 }
@@ -111,13 +115,18 @@ const keys = {
     d: {pressed: false} /// creating obj to keep track on key presses
 };
 
-const testBoundary = new Boundary({
-    position: {
-        x: 1500,
-        y: 1300
-    }
-});
 
+
+const movables = [bg];
+
+function rectangularCollision({rectangle1, rectangle2}) {
+    return (
+        rectangle1.position.x + rectangle1.width >= rectangle2.position.x &&
+        rectangle1.position.x <= rectangle2.position.x + rectangle2.width &&
+        rectangle1.position.y + rectangle1.height >= rectangle2.position.y &&
+        rectangle1.position.y <= rectangle2.position.y + rectangle2.height
+    );
+}
 
 function animate() {
     // AI FIX: The entire animation loop was fixed
@@ -131,18 +140,46 @@ function animate() {
     
     // Render order matters: background > boundaries > player (background to foreground)
     bg.draw();           // Background tiles (moves with camera)
-    testBoundary.draw(); // Collision boundaries (debug visualization)
-    player.draw();       // AI FIX: Was missing - player now renders. Why: draw() must be called!
-    ///boundaries.forEach(boundary => boundary.draw()); /// calling the draw method of each boundary object to draw the collision boundaries onto the canvas
-    
-
+    ///testBoundary.draw(); // Collision boundaries (debug visualization)
+          // AI FIX: Was missing - player now renders. Why: draw() must be called!
+    boundaries.forEach(boundary => {
+        boundary.draw(); /// calling the draw method of each boundary object to draw the collision boundaries onto the canvas
+        
+        // AI FIX: Convert player screen position to world coordinates for accurate collision
+        // Why: player.position is screen-based, boundary.position is world-based
+        const playerWorldX = player.position.x - bg.position.x;
+        const playerWorldY = player.position.y - bg.position.y;
+        
+        // AI FIX: Use 50% collision box to avoid transparent sprite padding
+        // Why: Player sprite includes transparent space around character, only check solid part
+        const collisionWidth = player.width * 0.45;
+        const collisionHeight = player.height * 0.45;
+        const collisionOffsetX = player.width * 0.25;  // Center the box (25% offset from each side)
+        const collisionOffsetY = player.height * 0.25;
+        
+        if (rectangularCollision({
+            rectangle1: {
+                position: {
+                    x: playerWorldX + collisionOffsetX,
+                    y: playerWorldY + collisionOffsetY
+                },
+                width: collisionWidth,
+                height: collisionHeight
+            },
+            rectangle2: boundary
+        })) {
+            console.log('Collision detected!');
+        }
+    })
+    player.draw(); 
+    ;
     
     // AI NOTE: Camera system - moving bg.position creates illusion of player movement
     // Why: Player stays centered, camera moves around player to simulate movement
-    if (keys.w.pressed && lastKey === 'w') bg.position.y += 4;      // Move camera down = see up
-    else if (keys.a.pressed && lastKey === 'a') bg.position.x += 4; // Move camera right = see left
-    else if (keys.s.pressed && lastKey === 's') bg.position.y -= 4; // Move camera up = see down
-    else if (keys.d.pressed && lastKey === 'd') bg.position.x -= 4; // Move camera left = see right   
+    if (keys.w.pressed && lastKey === 'w') movables.forEach(movable => movable.position.y += 4);      // Move camera down = see up
+    else if (keys.a.pressed && lastKey === 'a') movables.forEach(movable => movable.position.x += 4); // Move camera right = see left
+    else if (keys.s.pressed && lastKey === 's') movables.forEach(movable => movable.position.y -= 4); // Move camera up = see down
+    else if (keys.d.pressed && lastKey === 'd') movables.forEach(movable => movable.position.x -= 4); // Move camera left = see right   
     /// setup the character movement by changing the position of the background image when the corresponding keys are pressed, this will create the illusion of the player moving around the map.
 
 };
