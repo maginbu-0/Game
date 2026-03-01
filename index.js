@@ -12,7 +12,10 @@ for (let i = 0; i < collisions.length; i+=70) {
     collisionsMap.push(collisions.slice(i, 70 + i)); /// using a for loop to iterate through the collisions array and push the data into the collisionsMap array in chunks of 70, this is because the map is 70 tiles wide, so each chunk of 70 represents one row of the map.
 }
 
-
+const travelMap = []; /// creating an empty array to store the travel data for the map, this will be used to determine where the player can and cannot move on the map.
+for (let i = 0; i < travel.length; i+=70) {
+    travelMap.push(travel.slice(i, 70 + i)); /// using a for loop to iterate through the travel array and push the data into the travelMap array in chunks of 70, this is because the map is 70 tiles wide, so each chunk of 70 represents one row of the map.
+}
 
 const boundaries = []; /// creating an empty array to store the boundary objects for the map, this will be used to determine where the player can and cannot move on the map.
 const offset = {
@@ -36,6 +39,25 @@ function populateBoundaries() {
 
 // Populate boundaries after collision map is ready
 populateBoundaries();
+
+
+const travelPoints = []; /// creating an empty array to store the travel point objects for the map, this will be used to determine where the player can and cannot move on the map.
+
+function populateTravelPoints() {
+    travelMap.forEach((row, i) => {
+        row.forEach((symbol, j) => {
+            if (symbol !== 0) // Any non-zero value is a travel point
+            travelPoints.push(
+                new TravelPoint ({position: {
+                    x: j * Boundary.width,
+                    y: i * Boundary.height
+            }}))
+        })
+    }); /// using a nested forEach loop to iterate through the travelMap array and create a new TravelPoint object for each tile that has a travel point, the position of each travel point object is determined by its index in the travelMap array, multiplied by the size of each tile (72 pixels in this case). The travel point objects are then pushed into the travelPoints array.
+}
+
+// Populate travel points after travel map is ready
+populateTravelPoints();
 
 
 
@@ -135,84 +157,7 @@ function rectangularCollision({rectangle1, rectangle2}) {
     );
 }
 
-function animate() {
-    window.requestAnimationFrame(animate);
-    
-    // Clear canvas at start of frame
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Render order matters: background > boundaries > player (background to foreground)
-    
-    bg.draw();
-    
-    player.draw();
-    
-    fg.draw();
-    fg2.draw();
-    
-    boundaries.forEach(boundary => {
-        boundary.draw();
-    });
 
-
-    // AI NOTE: Camera system - moving bg.position creates illusion of player movement
-    
-    // Apply movement
-    if (keys.w.pressed && lastKey === 'w') {
-        movables.forEach(movable => movable.position.y += 4);
-    } else if (keys.a.pressed && lastKey === 'a') {
-        movables.forEach(movable => movable.position.x += 4);
-    } else if (keys.s.pressed && lastKey === 's') {
-        movables.forEach(movable => movable.position.y -= 4);
-    } else if (keys.d.pressed && lastKey === 'd') {
-        movables.forEach(movable => movable.position.x -= 4);
-    }
-    
-    // Check collision AFTER moving, and undo if there's a collision
-    for (let i = 0; i < boundaries.length; i++) {
-        const boundary = boundaries[i];
-        
-        // Convert boundary world position to screen position
-        const screenBoundary = {
-            position: {
-                x: boundary.position.x + bg.position.x,
-                y: boundary.position.y + bg.position.y
-            },
-            width: boundary.width,
-            height: boundary.height
-        };
-        
-        // Create a smaller hitbox for the player (50% of original size, centered)
-        const playerHitbox = {
-            position: {
-                x: player.position.x + player.width * 0.25,
-                y: player.position.y + player.height * 0.25
-            },
-            width: player.width * 0.35,
-            height: player.height * 0.35
-        };
-        
-        // Check if player collides with this boundary
-        if (rectangularCollision({
-            rectangle1: playerHitbox,
-            rectangle2: screenBoundary,
-        })) {
-            console.log('Collision detected - undoing movement');
-            // Undo the movement that caused the collision
-            if (keys.w.pressed && lastKey === 'w') {
-                movables.forEach(movable => movable.position.y -= 4);
-            } else if (keys.a.pressed && lastKey === 'a') {
-                movables.forEach(movable => movable.position.x -= 4);
-            } else if (keys.s.pressed && lastKey === 's') {
-                movables.forEach(movable => movable.position.y += 4);
-            } else if (keys.d.pressed && lastKey === 'd') {
-                movables.forEach(movable => movable.position.x += 4);
-            }
-            break;
-        }
-    }
-}
 
 let lastKey = ''; /// creating a variable to keep track of the last key pressed, this will be used to determine the direction of the player sprite when the corresponding key is pressed.
 window.addEventListener('keydown', (e) => {
@@ -222,21 +167,25 @@ window.addEventListener('keydown', (e) => {
             keys.w.pressed = true;
             lastKey = 'w';
             player.image = playerUp;
+            player.moving = true;
             break;
         case 'a':
             keys.a.pressed = true;
             lastKey = 'a';
             player.image = playerLeft;
+            player.moving = true;
             break;
         case 's':
             keys.s.pressed = true;
             lastKey = 's';
             player.image = playerDown;
+            player.moving = true;
             break;
         case 'd':
             keys.d.pressed = true;
             lastKey = 'd';
             player.image = playerRight;
+            player.moving = true;
             break;
     }
 }); /// adding an event listener for keydown events, which will allow the player to move around the map when the arrow keys are pressed.
@@ -246,20 +195,30 @@ window.addEventListener('keyup', (e) => {
     switch (e.key) {
         case 'w':
             keys.w.pressed = false;
+            player.moving = false;
+            player.frames.val = 0; // Reset to first frame of player-up
+            player.frames.elapsed = 0; // Reset animation timer
             break;
         case 'a':
             keys.a.pressed = false;
+            player.moving = false;
+            player.frames.val = 0; // Reset to first frame of player-left
+            player.frames.elapsed = 0; // Reset animation timer
             break;
         case 's':
             keys.s.pressed = false;
+            player.moving = false;
+            player.frames.val = 0; // Reset to first frame of player-down
+            player.frames.elapsed = 0; // Reset animation timer
             break;
         case 'd':
             keys.d.pressed = false;
+            player.moving = false;
+            player.frames.val = 0; // Reset to first frame of player-right
+            player.frames.elapsed = 0; // Reset animation timer
             break;
     }
 });
 
-// AI FIX: CRITICAL - This call starts the animation loop
-// Why: Without this, requestAnimationFrame is never triggered and nothing renders
-// NOTE: This MUST be called AFTER lastKey and event listeners are defined
+
 animate();

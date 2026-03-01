@@ -2,7 +2,7 @@ class Sprite {
     constructor({position,image,frames = {max: 1}}){
         this.position = position
         this.image = image
-        this.frames = frames
+        this.frames = {...frames, val:0, elapsed:0}
         this.width = 0
         this.height = 0
         
@@ -13,6 +13,7 @@ class Sprite {
         } else {
             this.image.onload = () => this.setupDimensions();
         }
+        this.moving = false;
     }
     
     setupDimensions() {
@@ -26,7 +27,7 @@ class Sprite {
         
         ctx.drawImage(
             this.image,
-            0,
+            this.frames.val * this.width, // In my case with 7 frames, I want to start at the first frame (0), but you can adjust this for animation to 1008/7=144
             0,
             this.image.width / this.frames.max,
             this.image.height,
@@ -35,9 +36,18 @@ class Sprite {
             this.width,
             this.height,
         ); 
+        
+        if (!this.moving) return; // Only animate frames if the sprite is moving
+
+        if (this.frames.max > 1){
+            this.frames.elapsed++;
+        }
+        if (this.frames.elapsed % 5 === 0){
+            if (this.frames.val < this.frames.max - 1) this.frames.val++;
+            else this.frames.val = 0;
+        }
     }
 }
-
 
 class Boundary {
     static width = 72;
@@ -48,7 +58,26 @@ class Boundary {
         this.height = 72;
     }
     draw(){
-        ctx.fillStyle = 'rgba(255, 0, 0, 0.5)'; // Semi-transparent red for debugging
+        ctx.fillStyle = 'rgba(255, 0, 0, 0)'; // Semi-transparent red for debugging
+        ctx.fillRect(
+            this.position.x + bg.position.x, 
+            this.position.y + bg.position.y, 
+            this.width, 
+            this.height
+        );
+    }
+}
+
+class TravelPoint {
+    static width = 72;
+    static height = 72;
+    constructor({position}){
+        this.position = position;
+        this.width = 72;
+        this.height = 72;
+    }
+    draw(){
+        ctx.fillStyle = 'rgba(0, 0, 255, 0.5)'; // Semi-transparent blue for travel points
         ctx.fillRect(
             this.position.x + bg.position.x, 
             this.position.y + bg.position.y, 
