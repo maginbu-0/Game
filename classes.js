@@ -71,13 +71,14 @@ class Boundary {
 class TravelPoint {
     static width = 72;
     static height = 72;
-    constructor({position}){
+    constructor({position, id}){
         this.position = position;
         this.width = 72;
         this.height = 72;
+        this.id = id || 0; // Store the travel point ID (98, 99, etc.)
     }
     draw(){
-        ctx.fillStyle = 'rgba(0, 0, 255, 0.5)'; // Semi-transparent blue for travel points
+        ctx.fillStyle = 'rgba(0, 0, 255, 0)'; // Semi-transparent blue for travel points
         ctx.fillRect(
             this.position.x + bg.position.x, 
             this.position.y + bg.position.y, 

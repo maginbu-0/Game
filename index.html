@@ -6,12 +6,24 @@
                 background-color: black;
             }
         </style>
-        
-        <canvas>    </canvas>
+        <div style="display: inline-block; position: relative;">   
+            <div 
+            id="overlappingDiv"
+            style="background-color: black; position: absolute; top: 0; left: 0;
+                        width: 100%; height: 100%; opacity: 0; pointer-events: none;"></div>
+            <canvas>    </canvas>
+        </div>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js" 
+                integrity="sha512-NcZdtrT77bJr4STcmsGAESr06BYGE8woZdSdEgqnpyqac7sugNO+Tr4bGwGF3MsnEkGKhU2KL2xh6Ec+BqsaHA==" 
+                crossorigin="anonymous" 
+                referrerpolicy="no-referrer"></script>
         <script src="game-assets/world-assets/travel.js"></script>
         <script src="game-assets/world-assets/collisions.js"></script>
-        <script src="animate.js"></script>
+        <script src="game-assets/world-assets/collisions-indoors.js"></script>
         <script src="classes.js"></script>
+        <script src="animate.js"></script>
         <script src="index.js"></script>
+        <script src="animateBuilding1.js"></script>
+        <script src="animateBuilding2.js"></script>
     </body>
 </html>

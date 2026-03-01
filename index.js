@@ -12,12 +12,18 @@ for (let i = 0; i < collisions.length; i+=70) {
     collisionsMap.push(collisions.slice(i, 70 + i)); /// using a for loop to iterate through the collisions array and push the data into the collisionsMap array in chunks of 70, this is because the map is 70 tiles wide, so each chunk of 70 represents one row of the map.
 }
 
+const collisionsIndoorsMap = []; /// creating an empty array to store the collision data for the indoor map, this will be used to determine where the player can and cannot move indoors.
+for (let i = 0; i < collisionsIndoors.length; i+=70) {
+    collisionsIndoorsMap.push(collisionsIndoors.slice(i, 70 + i)); /// using a for loop to iterate through the collisionsIndoors array and push the data into the collisionsIndoorsMap array in chunks of 70, this is because the indoor map is 70 tiles wide, so each chunk of 70 represents one row of the indoor map.
+}
+
 const travelMap = []; /// creating an empty array to store the travel data for the map, this will be used to determine where the player can and cannot move on the map.
 for (let i = 0; i < travel.length; i+=70) {
     travelMap.push(travel.slice(i, 70 + i)); /// using a for loop to iterate through the travel array and push the data into the travelMap array in chunks of 70, this is because the map is 70 tiles wide, so each chunk of 70 represents one row of the map.
 }
 
-const boundaries = []; /// creating an empty array to store the boundary objects for the map, this will be used to determine where the player can and cannot move on the map.
+const boundaries = [];
+const boundariesIndoors = [];  /// creating an empty array to store the boundary objects for the indoor map, this will be used to determine where the player can and cannot move indoors.
 const offset = {
     x: 1325,
     y: 1100
@@ -40,6 +46,23 @@ function populateBoundaries() {
 // Populate boundaries after collision map is ready
 populateBoundaries();
 
+function populateBoundariesIndoors() {
+    collisionsIndoorsMap.forEach((row, i) => {
+        row.forEach((symbol, j) => {
+            if (symbol !== 0) // Any non-zero value is a collision
+            boundariesIndoors.push(
+                new Boundary({position: {
+                    // *** FIX: Only use tile coordinates, camera offset is applied in draw() ***
+                    x: j * Boundary.width,
+                    y: i * Boundary.height
+            }}))
+        })
+    }); /// using a nested forEach loop to iterate through the collisionsIndoorsMap array and create a new Boundary object for each tile that has a collision, the position of each boundary object is determined by its index in the collisionsIndoorsMap array, multiplied by the size of each tile (72 pixels in this case). The boundary objects are then pushed into the boundaries array.
+}
+
+// Populate boundaries after collision map is ready
+populateBoundariesIndoors();
+
 
 const travelPoints = []; /// creating an empty array to store the travel point objects for the map, this will be used to determine where the player can and cannot move on the map.
 
@@ -48,16 +71,38 @@ function populateTravelPoints() {
         row.forEach((symbol, j) => {
             if (symbol !== 0) // Any non-zero value is a travel point
             travelPoints.push(
-                new TravelPoint ({position: {
-                    x: j * Boundary.width,
-                    y: i * Boundary.height
-            }}))
+                new TravelPoint ({
+                    position: {
+                        x: j * Boundary.width,
+                        y: i * Boundary.height
+                    },
+                    id: symbol
+                })
+            )
         })
     }); /// using a nested forEach loop to iterate through the travelMap array and create a new TravelPoint object for each tile that has a travel point, the position of each travel point object is determined by its index in the travelMap array, multiplied by the size of each tile (72 pixels in this case). The travel point objects are then pushed into the travelPoints array.
 }
 
 // Populate travel points after travel map is ready
 populateTravelPoints();
+
+const travelPointsIndoors = []; /// creating an empty array to store the travel point objects for the indoor map
+
+function populateTravelPointsIndoors() {
+    travelMap.forEach((row, i) => {
+        row.forEach((symbol, j) => {
+            if (symbol !== 0) // Any non-zero value is a travel point
+            travelPointsIndoors.push(
+                new TravelPoint ({position: {
+                    x: j * Boundary.width,
+                    y: i * Boundary.height
+            }}))
+        })
+    }); /// using a nested forEach loop to iterate through the travelMap array and create a new TravelPoint object for each tile that has a travel point on the indoor map
+}
+
+// Populate indoor travel points after travel map is ready
+populateTravelPointsIndoors();
 
 
 
@@ -76,8 +121,15 @@ fgimage2.src = './game-assets/foregroundobj-2.png'; /// Update this path if your
 fgimage2.onload = () => console.log('Foreground-2 image loaded');
 fgimage2.onerror = () => console.error('Failed to load foreground-2 image:', fgimage2.src);
 
+const indoor_fgimage = new Image(); /// creating a new image object for the map
+indoor_fgimage.src = './game-assets/foreground1-indoors.png'; /// Update this path if your image file is different
+indoor_fgimage.onload = () => console.log('Indoor foreground image loaded');
+indoor_fgimage.onerror = () => console.error('Failed to load indoor foreground image:', indoor_fgimage.src);
 
-
+const indoor_fgimage2 = new Image(); /// creating a new image object for the map
+indoor_fgimage2.src = './game-assets/foreground2-indoors.png'; /// Update this path if your image file is different
+indoor_fgimage2.onload = () => console.log('Indoor foreground-2 image loaded');
+indoor_fgimage2.onerror = () => console.error('Failed to load indoor foreground-2 image:', indoor_fgimage2.src);
 
 
 // Load directional player sprites
@@ -135,6 +187,23 @@ const fg = new Sprite({
     image: fgimage
 });
 
+const indoor_fg2 = new Sprite({
+    position: {
+        x: -offset.x,
+        y: -offset.y
+    },
+    image: indoor_fgimage2
+});
+
+const indoor_fg = new Sprite({
+    position: {
+        x: -offset.x,
+        y: -offset.y
+    },
+    image: indoor_fgimage
+
+});
+
 
 
 const keys = {
@@ -146,7 +215,7 @@ const keys = {
 
 
 
-const movables = [bg,fg,fg2]; /// creating an array to store all the objects that can be moved on the map, this will be used to move the background and boundaries when the player moves, creating the illusion of the player moving around the map while actually moving the world around them.
+const movables = [bg,fg,fg2,indoor_fg,indoor_fg2]; /// creating an array to store all the objects that can be moved on the map, this will be used to move the background and boundaries when the player moves, creating the illusion of the player moving around the map while actually moving the world around them.
 
 function rectangularCollision({rectangle1, rectangle2}) {
     return (
@@ -220,5 +289,6 @@ window.addEventListener('keyup', (e) => {
     }
 });
 
-
+console.log('INDEX.JS: Starting game - calling animate()');
 animate();
+

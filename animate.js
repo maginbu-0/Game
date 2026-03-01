@@ -1,5 +1,17 @@
+let globalAnimationID = null;
+
 function animate() {
-    window.requestAnimationFrame(animate);
+    globalAnimationID = window.requestAnimationFrame(animate);
+    
+    // Don't run outdoor animation if indoors is active
+    if (window.indoorsAnimationRunning === true || window.indoorsAnimationRunning2 === true) {
+        return;
+    }
+    
+    // Initialize travel flag if not already set
+    if (window.travelInProgress === undefined) {
+        window.travelInProgress = false;
+    }
     
     // Clear canvas at start of frame
     ctx.fillStyle = 'white';
@@ -23,26 +35,31 @@ function animate() {
 
     fg2.draw();
 
-    
+    // Freeze player animation during travel
+    if (window.travelInProgress) {
+        player.moving = false;
+    }
 
-    
-
-
-    // AI NOTE: Camera system - moving bg.position creates illusion of player movement
-    
-    // Apply movement
-    if (keys.w.pressed && lastKey === 'w') {
-        player.moving = true;
-        movables.forEach(movable => movable.position.y += 4);
-    } else if (keys.a.pressed && lastKey === 'a') {
-        player.moving = true;
-        movables.forEach(movable => movable.position.x += 4);
-    } else if (keys.s.pressed && lastKey === 's') {
-        player.moving = true;
-        movables.forEach(movable => movable.position.y -= 4);
-    } else if (keys.d.pressed && lastKey === 'd') {
-        player.moving = true;
-        movables.forEach(movable => movable.position.x -= 4);
+    // Log player position every 30 frames to avoid console spam
+    //if (window.frameCount === undefined) window.frameCount = 0;
+    //window.frameCount++;
+    //if (window.frameCount % 30 === 0) {
+    //    console.log(`Player position - x: ${Math.round(player.position.x)}, y: ${Math.round(player.position.y)}`);
+    //}
+    if (!window.travelInProgress) {
+        if (keys.w.pressed && lastKey === 'w') {
+            player.moving = true;
+            movables.forEach(movable => movable.position.y += 4);
+        } else if (keys.a.pressed && lastKey === 'a') {
+            player.moving = true;
+            movables.forEach(movable => movable.position.x += 4);
+        } else if (keys.s.pressed && lastKey === 's') {
+            player.moving = true;
+            movables.forEach(movable => movable.position.y -= 4);
+        } else if (keys.d.pressed && lastKey === 'd') {
+            player.moving = true;
+            movables.forEach(movable => movable.position.x -= 4);
+        }
     }
     
     // Check collision AFTER moving, and undo if there's a collision
@@ -122,11 +139,47 @@ function animate() {
             rectangle1: playerHitbox,
             rectangle2: screenTravelPoint
         });
-        const overlappingArea = Math.max(0, Math.min(playerHitbox.position.x + playerHitbox.width, screenTravelPoint.position.x + screenTravelPoint.width) - Math.max(playerHitbox.position.x, screenTravelPoint.position.x)) *
-                                Math.max(0, Math.min(playerHitbox.position.y + playerHitbox.height, screenTravelPoint.position.y + screenTravelPoint.height) - Math.max(playerHitbox.position.y, screenTravelPoint.position.y));
-        if (isColliding && overlappingArea > (playerHitbox.width * playerHitbox.height) * 0.8) { // Require at least 75% overlap for travel point activation
-            console.log('Travel point detected!', travelPoint.position);
-            // TODO: Add travel/portal logic here
+        const overlappingArea = Math.max(0, Math.min(playerHitbox.position.x + playerHitbox.width, 
+                                            screenTravelPoint.position.x + screenTravelPoint.width) - Math.max(playerHitbox.position.x, screenTravelPoint.position.x)) *
+                                Math.max(0, Math.min(playerHitbox.position.y + playerHitbox.height, 
+                                            screenTravelPoint.position.y + screenTravelPoint.height) - Math.max(playerHitbox.position.y, screenTravelPoint.position.y));
+        if (isColliding && overlappingArea > (playerHitbox.width * playerHitbox.height) * 0.8) { // Require at least 80% overlap for travel point activation
+            // Only trigger travel animation once
+            if (!window.travelInProgress) {
+                console.log('Travel point detected!', travelPoint.position, 'ID:', travelPoint.id);
+                window.travelInProgress = true; // Stop player movement
+                gsap.to('#overlappingDiv', {
+                    opacity: 1,
+                    repeat: 3,
+                    yoyo: true,
+                    duration: 0.4,
+                    onComplete() {
+                        console.log('GSAP animation complete, canceling outdoor loop');
+                        // Cancel the outdoor animation loop
+                        window.cancelAnimationFrame(globalAnimationID);
+                        // Small delay to ensure outdoor loop fully stops before starting indoors
+                        setTimeout(() => {
+                            console.log('Delay complete, starting indoors animation for building:', travelPoint.id);
+                            // Route to correct building based on travel point ID
+                            if (travelPoint.id === 4098) {
+                                startIndoorsAnimation();
+                            } else if (travelPoint.id === 4099) {
+                                startIndoorsAnimation2();
+                            }
+                        }, 100);
+                        // Fade out overlay
+                        gsap.to('#overlappingDiv', {
+                            opacity: 0,
+                            duration: 0.4
+                        });
+                    }
+                });
+            }
         }
-    }
-}
+                
+                
+
+                // Create map change into building animation need to quit this animation file
+            }
+        }
+
